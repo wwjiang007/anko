@@ -1,15 +1,11 @@
 package org.jetbrains.kotlin.android.dslpreview
 
-import com.android.tools.idea.gradle.project.BuildSettings
+import com.android.tools.idea.common.model.NlModel
 import com.android.tools.idea.gradle.project.GradleProjectInfo
 import com.android.tools.idea.gradle.project.build.invoker.GradleBuildInvoker
-import com.android.tools.idea.gradle.util.BuildMode
 import com.android.tools.idea.project.AndroidProjectInfo
 import com.android.tools.idea.uibuilder.editor.NlPreviewForm
 import com.android.tools.idea.uibuilder.editor.NlPreviewManager
-import com.android.tools.idea.common.model.NlModel
-import com.android.tools.idea.gradle.project.build.invoker.GradleTaskFinder
-import com.android.tools.idea.gradle.project.build.invoker.TestCompileType
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -17,14 +13,14 @@ import com.intellij.openapi.extensions.Extensions
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Computable
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.psi.*
-import com.intellij.psi.impl.PsiTreeChangePreprocessor
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.xml.XmlFile
 import com.intellij.util.Alarm
 import org.jetbrains.android.uipreview.ViewLoaderExtension
@@ -43,15 +39,7 @@ class AnkoNlPreviewManager(
 ) : NlPreviewManager(project, fileEditorManager), Disposable {
     internal val classResolver = DslPreviewClassResolver(project)
 
-    @Volatile
-    private var lastSourceFileModification = -1L
-
     internal var myActivityListModel: DefaultComboBoxModel<Any> = DefaultComboBoxModel()
-
-    private val sourceFileModificationTracker by lazy {
-        project.getExtensions(PsiTreeChangePreprocessor.EP_NAME)
-                .first { it is SourceFileModificationTracker } as SourceFileModificationTracker
-    }
 
     private val viewLoaderExtension by lazy {
         val area = Extensions.getArea(project)
@@ -87,12 +75,15 @@ class AnkoNlPreviewManager(
             return null
         }
 
+        val ankoPreviewFrom = previewForm as? AnkoPreviewForm ?: return null
         val module = ModuleUtilCore.findModuleForPsiElement(file) ?: return null
 
-        return if (refresh() || previewForm.file == null) {
-            generateStubXmlFile(module, file)
+        return if (refresh() || ankoPreviewFrom.xmlFile == null) {
+            generateStubXmlFile(module, file).also {
+                ankoPreviewFrom.xmlFile = it
+            }
         } else {
-            previewForm.file
+            ankoPreviewFrom.xmlFile
         }
     }
 
@@ -111,7 +102,7 @@ class AnkoNlPreviewManager(
         return null
     }
 
-    internal fun generateStubXmlFile(module: Module, originalFile: KtFile): LayoutPsiFile {
+    private fun generateStubXmlFile(module: Module, originalFile: KtFile): LayoutPsiFile {
         val filename = "anko_preview.xml"
         val content = """<?xml version="1.0" encoding="utf-8"?>
                 <__anko.preview.View xmlns:android="http://schemas.android.com/apk/res/android"
@@ -165,36 +156,9 @@ class AnkoNlPreviewManager(
         resolveAvailableClasses()
     }
 
-    override fun createPreviewForm(): NlPreviewForm {
-        return object : NlPreviewForm(this@AnkoNlPreviewManager) {
-            override fun setActiveModel(model: NlModel?) {
-                super.setActiveModel(model)
+    override fun createPreviewForm(): NlPreviewForm = AnkoPreviewForm(this)
 
-                if (model != null) {
-                    (this.toolbarComponent as? JPanel)?.let { addLayoutComboBox(it) }
-                }
-            }
-        }
-    }
-
-    private fun addLayoutComboBox(panel: JPanel) {
-        if (panel.components.firstIsInstanceOrNull<PreviewCandidateComboBox>() != null) {
-            return
-        }
-
-        val comboBox = PreviewCandidateComboBox(myActivityListModel)
-        comboBox.addItemListener { itemEvent ->
-            if (itemEvent.stateChange == ItemEvent.SELECTED) {
-                updatePreview()
-            }
-        }
-
-        panel.add(comboBox, BorderLayout.SOUTH)
-    }
-
-    private class PreviewCandidateComboBox(model: ComboBoxModel<Any>?) : ComboBox<Any>(model)
-
-    private fun updatePreview() {
+    internal fun updatePreview() {
         getActiveTextEditor()?.let { notifyFileShown(it, true) }
     }
 
@@ -213,18 +177,34 @@ class AnkoNlPreviewManager(
 
     override fun isUseInteractiveSelector() = false
 
-    private fun requestCompileIfNeeded() {
-        val actualSourceFileModification = sourceFileModificationTracker.modificationCount
-        if (actualSourceFileModification == lastSourceFileModification) return
-        lastSourceFileModification = actualSourceFileModification
-
-        val modules = ModuleManager.getInstance(project).modules
-        val gradleInvoker = GradleBuildInvoker.getInstance(project)
-        val buildMode = BuildMode.COMPILE_JAVA
-        BuildSettings.getInstance(project).buildMode = buildMode
-        val tasks = GradleTaskFinder.getInstance().findTasksToExecute(modules, buildMode, TestCompileType.NONE)
-        gradleInvoker.executeTasks(tasks)
-    }
-
     override fun dispose() {}
 }
+
+class AnkoPreviewForm(private val ankoPreviewManager: AnkoNlPreviewManager) : NlPreviewForm(ankoPreviewManager) {
+    var xmlFile: XmlFile? = null
+
+    override fun setActiveModel(model: NlModel?) {
+        super.setActiveModel(model)
+
+        if (model != null) {
+            (this.toolbarComponent as? JPanel)?.let { addLayoutComboBox(it) }
+        }
+    }
+
+    private fun addLayoutComboBox(panel: JPanel) {
+        if (panel.components.firstIsInstanceOrNull<PreviewCandidateComboBox>() != null) {
+            return
+        }
+
+        val comboBox = PreviewCandidateComboBox(ankoPreviewManager.myActivityListModel)
+        comboBox.addItemListener { itemEvent ->
+            if (itemEvent.stateChange == ItemEvent.SELECTED) {
+                ankoPreviewManager.updatePreview()
+            }
+        }
+
+        panel.add(comboBox, BorderLayout.SOUTH)
+    }
+}
+
+class PreviewCandidateComboBox(model: ComboBoxModel<Any>) : ComboBox<Any>(model)

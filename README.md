@@ -1,11 +1,14 @@
-[![official JetBrains project](http://jb.gg/badges/official.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub)
+[![obsolete JetBrains project](https://jb.gg/badges/obsolete.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub)
 [![Download](https://api.bintray.com/packages/jetbrains/anko/anko/images/download.svg) ](https://bintray.com/jetbrains/anko/anko/_latestVersion)
-[![TeamCity (simple build status)](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/ProjectsWrittenInKotlin_Anko.svg)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=ProjectsWrittenInKotlin_Anko&tab=buildTypeStatusDiv)
-[![GitHub license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
+[![GitHub license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 <img src="doc/logo.png" alt="Anko logo" height="101" width="220" />
 
-Anko is a [Kotlin](http://www.kotlinlang.org/) library which makes Android application development faster and easier. It makes your code clean and easy to read, and lets you forget about rough edges of the Android SDK for Java.
+:warning: Anko is deprecated. Please see [this page](/GOODBYE.md) for more information.
+
+* * *
+
+Anko is a [Kotlin](https://www.kotlinlang.org/) library which makes Android application development faster and easier. It makes your code clean and easy to read, and lets you forget about rough edges of the Android SDK for Java.
 
 Anko consists of several parts:
 
@@ -36,7 +39,7 @@ verticalLayout {
 }
 ```
 
-The code above creates a button inside a `LinearLayout` and attaches an `OnClickListener` to that button. Moreover, `onClick` accepts a [`suspend` lambda](http://kotlinlang.org/docs/reference/coroutines.html), so you can write your asynchronous code right inside the listener!
+The code above creates a button inside a `LinearLayout` and attaches an `OnClickListener` to that button. Moreover, `onClick` accepts a [`suspend` lambda](https://kotlinlang.org/docs/reference/coroutines.html), so you can write your asynchronous code right inside the listener!
 
 Note that this is the complete layout code. No XML is required!
 
@@ -66,7 +69,7 @@ fun getUsers(db: ManagedSQLiteOpenHelper): List<User> = db.use {
 *Anko Coroutines* is based on the [`kotlinx.coroutines`](https://github.com/kotlin/kotlinx.coroutines) library and provides:
 
 * [`bg()`](https://github.com/Kotlin/anko/wiki/Anko-Coroutines#bg) function that executes your code in a common pool.
-* [`asReference()`](https://github.com/Kotlin/anko/wiki/Anko-Coroutines#asreference) function which creates a weak reference wrapper. By default, a coroutine holds references to captured objects until it is finished or canceled. If your asynchronous framework does not support cancellation, the values you use inside the asynchonous block can be leaked. `asReference()` protects you from this.
+* [`asReference()`](https://github.com/Kotlin/anko/wiki/Anko-Coroutines#asreference) function which creates a weak reference wrapper. By default, a coroutine holds references to captured objects until it is finished or canceled. If your asynchronous framework does not support cancellation, the values you use inside the asynchronous block can be leaked. `asReference()` protects you from this.
 
 ## Using Anko
 
@@ -76,13 +79,13 @@ Anko has a meta-dependency which plugs in all available features (including Comm
 
 ```gradle
 dependencies {
-    compile "org.jetbrains.anko:anko:$anko_version"
+    implementation "org.jetbrains.anko:anko:$anko_version"
 }
 ```
 Make sure that you have the ```$anko_version``` settled in your gradle file at the project level:
 
 ```
-ext.anko_version='0.10.4'
+ext.anko_version='0.10.8'
 ```
 
 If you only need some of the features, you can reference any of Anko's parts:
@@ -90,18 +93,18 @@ If you only need some of the features, you can reference any of Anko's parts:
 ```gradle
 dependencies {
     // Anko Commons
-    compile "org.jetbrains.anko:anko-commons:$anko_version"
+    implementation "org.jetbrains.anko:anko-commons:$anko_version"
 
     // Anko Layouts
-    compile "org.jetbrains.anko:anko-sdk25:$anko_version" // sdk15, sdk19, sdk21, sdk23 are also available
-    compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
+    implementation "org.jetbrains.anko:anko-sdk25:$anko_version" // sdk15, sdk19, sdk21, sdk23 are also available
+    implementation "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
 
     // Coroutine listeners for Anko Layouts
-    compile "org.jetbrains.anko:anko-sdk25-coroutines:$anko_version"
-    compile "org.jetbrains.anko:anko-appcompat-v7-coroutines:$anko_version"
+    implementation "org.jetbrains.anko:anko-sdk25-coroutines:$anko_version"
+    implementation "org.jetbrains.anko:anko-appcompat-v7-coroutines:$anko_version"
 
     // Anko SQLite
-    compile "org.jetbrains.anko:anko-sqlite:$anko_version"
+    implementation "org.jetbrains.anko:anko-sqlite:$anko_version"
 }
 ```
 
@@ -110,37 +113,37 @@ There are also a number of artifacts for the Android support libraries:
 ```gradle
 dependencies {
     // Appcompat-v7 (only Anko Commons)
-    compile "org.jetbrains.anko:anko-appcompat-v7-commons:$anko_version"
+    implementation "org.jetbrains.anko:anko-appcompat-v7-commons:$anko_version"
 
     // Appcompat-v7 (Anko Layouts)
-    compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
-    compile "org.jetbrains.anko:anko-coroutines:$anko_version"
+    implementation "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
+    implementation "org.jetbrains.anko:anko-coroutines:$anko_version"
 
     // CardView-v7
-    compile "org.jetbrains.anko:anko-cardview-v7:$anko_version"
+    implementation "org.jetbrains.anko:anko-cardview-v7:$anko_version"
 
     // Design
-    compile "org.jetbrains.anko:anko-design:$anko_version"
-    compile "org.jetbrains.anko:anko-design-coroutines:$anko_version"
+    implementation "org.jetbrains.anko:anko-design:$anko_version"
+    implementation "org.jetbrains.anko:anko-design-coroutines:$anko_version"
 
     // GridLayout-v7
-    compile "org.jetbrains.anko:anko-gridlayout-v7:$anko_version"
+    implementation "org.jetbrains.anko:anko-gridlayout-v7:$anko_version"
 
     // Percent
-    compile "org.jetbrains.anko:anko-percent:$anko_version"
+    implementation "org.jetbrains.anko:anko-percent:$anko_version"
 
     // RecyclerView-v7
-    compile "org.jetbrains.anko:anko-recyclerview-v7:$anko_version"
-    compile "org.jetbrains.anko:anko-recyclerview-v7-coroutines:$anko_version"
+    implementation "org.jetbrains.anko:anko-recyclerview-v7:$anko_version"
+    implementation "org.jetbrains.anko:anko-recyclerview-v7-coroutines:$anko_version"
 
     // Support-v4 (only Anko Commons)
-    compile "org.jetbrains.anko:anko-support-v4-commons:$anko_version"
+    implementation "org.jetbrains.anko:anko-support-v4-commons:$anko_version"
 
     // Support-v4 (Anko Layouts)
-    compile "org.jetbrains.anko:anko-support-v4:$anko_version"
+    implementation "org.jetbrains.anko:anko-support-v4:$anko_version"
 
     // ConstraintLayout
-    compile "org.jetbrains.anko:anko-constraint-layout:$anko_version"
+    implementation "org.jetbrains.anko:anko-constraint-layout:$anko_version"
 }
 ```
 

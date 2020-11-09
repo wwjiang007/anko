@@ -1,19 +1,31 @@
+package com.example.android_test
+
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import org.jetbrains.anko.db.*
+import org.jetbrains.anko.db.AUTOINCREMENT
+import org.jetbrains.anko.db.ConstraintActions
+import org.jetbrains.anko.db.FOREIGN_KEY
+import org.jetbrains.anko.db.INTEGER
+import org.jetbrains.anko.db.ON_DELETE
+import org.jetbrains.anko.db.PRIMARY_KEY
+import org.jetbrains.anko.db.TEXT
+import org.jetbrains.anko.db.UNIQUE
+import org.jetbrains.anko.db.createTable
+import org.jetbrains.anko.db.delete
+import org.jetbrains.anko.db.insert
+import org.jetbrains.anko.db.select
+import org.jetbrains.anko.db.update
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricGradleTestRunner
+import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import test.BuildConfig
 
-
-@RunWith(RobolectricGradleTestRunner::class)
+@RunWith(RobolectricTestRunner::class)
 @Config(constants = BuildConfig::class) class AnkoSQliteTest {
 
     private var databaseHelper: DbHelper? = null
@@ -103,6 +115,58 @@ import test.BuildConfig
             assertEquals(3, getInt(0))
             assertEquals("Fedya", getString(1))
             assertEquals("fedor@domain.org", getString(2))
+        }
+    }
+
+    @Test
+    fun testForeignKeyOnDeleteCascade() = databaseTest {
+
+        rawQuery("PRAGMA foreign_keys = ON", emptyArray()).close()
+
+        createTable(
+                "users",
+                true,
+                "id" to INTEGER + PRIMARY_KEY + UNIQUE,
+                "name" to TEXT
+        )
+
+        insert("users", "name" to "John")
+        insert("users", "name" to "Vasya")
+
+        createTable(
+                "emails",
+                true,
+                "id" to INTEGER + PRIMARY_KEY + AUTOINCREMENT,
+                "email" to TEXT,
+                "userId" to INTEGER,
+                FOREIGN_KEY("userId", "users", "id", ON_DELETE(ConstraintActions.CASCADE))
+        )
+
+        insert("emails",  "email" to "johny@domain.org", "userId" to 1)
+        insert("emails",  "email" to "vasiliy@domain.org", "userId" to 2)
+
+        select("emails").exec {
+            moveToNext()
+            assertEquals("johny@domain.org", getString(1))
+        }
+
+        select("users").exec {
+            moveToNext()
+            assertEquals("John", getString(1))
+        }
+
+
+        delete("users", "id = {userId}", "userId" to 1)
+
+
+        select("emails").exec {
+            moveToNext()
+            assertEquals("vasiliy@domain.org", getString(1))
+        }
+
+        select("users").exec {
+            moveToNext()
+            assertEquals("Vasya", getString(1))
         }
     }
 

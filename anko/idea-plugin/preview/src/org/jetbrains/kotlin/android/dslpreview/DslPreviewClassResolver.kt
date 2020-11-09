@@ -15,10 +15,9 @@ import com.intellij.psi.search.searches.ClassInheritorsSearch
 import org.jetbrains.kotlin.asJava.elements.KtLightElement
 import org.jetbrains.kotlin.caches.resolve.KotlinCacheService
 import org.jetbrains.kotlin.codegen.ClassBuilderMode
-import org.jetbrains.kotlin.codegen.CodegenFileClassesProvider
 import org.jetbrains.kotlin.codegen.state.IncompatibleClassTracker
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
-import org.jetbrains.kotlin.idea.util.application.runReadAction
+import org.jetbrains.kotlin.config.JvmTarget
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtConstructor
@@ -28,7 +27,7 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
 import org.jetbrains.kotlin.resolve.lazy.ResolveSession
 import org.jetbrains.kotlin.types.typeUtil.supertypes
-import java.util.ArrayList
+import java.util.*
 
 internal class DslPreviewClassResolver(private val project: Project) {
 
@@ -124,10 +123,34 @@ internal class DslPreviewClassResolver(private val project: Project) {
         val ANKO_COMPONENT_CLASS_NAME = "org.jetbrains.anko.AnkoComponent"
 
         private fun createTypeMapper(bindingContext: BindingContext): KotlinTypeMapper {
-            // TODO: remove this hack when kotlin 1.2 will be bundled in AS
-            val typeMapperConstructor12 = KotlinTypeMapper::class.java.constructors.find { it.parameterCount == 6 }
-            if (typeMapperConstructor12 != null) {
-                return typeMapperConstructor12
+            // TODO: Add stable constructor to KotlinTypeMapper
+            val typeMapperConstructor7 = KotlinTypeMapper::class.java.constructors.find { it.parameterCount == 7 }
+            if (typeMapperConstructor7 != null) {
+                if (typeMapperConstructor7.parameterTypes[4].isAssignableFrom(JvmTarget::class.java))
+                    return typeMapperConstructor7
+                            .newInstance(
+                                    bindingContext,
+                                    ClassBuilderMode.LIGHT_CLASSES,
+                                    IncompatibleClassTracker.DoNothing,
+                                    "main",
+                                    JvmTarget.DEFAULT,
+                                    false,
+                                    false) as KotlinTypeMapper
+                else
+                    return typeMapperConstructor7
+                            .newInstance(
+                                    bindingContext,
+                                    ClassBuilderMode.LIGHT_CLASSES,
+                                    IncompatibleClassTracker.DoNothing,
+                                    "main",
+                                    false,
+                                    false,
+                                    false) as KotlinTypeMapper
+            }
+
+            val typeMapperConstructor6 = KotlinTypeMapper::class.java.constructors.find { it.parameterCount == 6 }
+            if (typeMapperConstructor6 != null) {
+                return typeMapperConstructor6
                         .newInstance(
                                 bindingContext,
                                 ClassBuilderMode.LIGHT_CLASSES,
@@ -140,10 +163,8 @@ internal class DslPreviewClassResolver(private val project: Project) {
             return KotlinTypeMapper(
                     bindingContext,
                     ClassBuilderMode.LIGHT_CLASSES,
-                    CodegenFileClassesProvider(),
                     IncompatibleClassTracker.DoNothing,
                     "main",
-                    false,
                     false)
         }
     }
